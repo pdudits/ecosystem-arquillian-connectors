@@ -58,10 +58,13 @@ package fish.payara.arquillian.container.payara;
 
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN_TYPE;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.logging.Logger;
 
 import org.glassfish.jersey.media.multipart.FormDataMultiPart;
+import org.glassfish.jersey.media.multipart.file.FileDataBodyPart;
 import org.glassfish.jersey.media.multipart.file.StreamDataBodyPart;
 import org.jboss.arquillian.container.spi.client.container.DeploymentException;
 import org.jboss.arquillian.container.spi.client.container.LifecycleException;
@@ -122,11 +125,13 @@ public class CommonPayaraManager<C extends CommonPayaraConfiguration> {
         final ProtocolMetaData protocolMetaData = new ProtocolMetaData();
 
         try {
-            InputStream deployment = archive.as(ZipExporter.class).exportAsInputStream();
+            File deploymentFile = File.createTempFile("deploy", archiveName);
+            deploymentFile.deleteOnExit();
+            archive.as(ZipExporter.class).exportTo(deploymentFile, true);
 
             // Build up the POST form to send to Payara
             final FormDataMultiPart form = new FormDataMultiPart();
-            form.bodyPart(new StreamDataBodyPart("id", deployment, archiveName));
+            form.bodyPart(new FileDataBodyPart("id", deploymentFile));
 
             deploymentName = createDeploymentName(archiveName);
             addDeployFormFields(deploymentName, form);
@@ -134,7 +139,7 @@ public class CommonPayaraManager<C extends CommonPayaraConfiguration> {
             // Do Deploy the application on the remote Payara
             HTTPContext httpContext = payaraClient.doDeploy(deploymentName, form);
             protocolMetaData.addContext(httpContext);
-        } catch (PayaraClientException e) {
+        } catch (PayaraClientException | IOException e) {
             throw new DeploymentException("Could not deploy " + archiveName, e);
         }
         

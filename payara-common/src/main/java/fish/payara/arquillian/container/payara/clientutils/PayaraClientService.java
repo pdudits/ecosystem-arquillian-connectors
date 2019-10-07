@@ -325,7 +325,12 @@ public class PayaraClientService implements PayaraClient {
         name = registerDeployedName(name, deployedName);
         // Fetch the list of SubComponents of the application
         Map<String, Object> subComponentsResponse = getClientUtil().GETRequest(APPLICATION_COMPONENTS.replace("{application}", name));
-        
+
+        log.info("And now testing hot deploy...");
+        form.field("hotDeploy","true");
+        form.field("force", "true");
+        getClientUtil().POSTMultiPartRequest(APPLICATION, form);
+
         @SuppressWarnings("unchecked")
         Map<String, String> subComponents = (Map<String, String>) subComponentsResponse.get("properties");
 
